@@ -24,17 +24,26 @@ func (s *WorkStore) List() []WorkOrder {
 	return orders
 }
 
-func (s *WorkStore) Update(id, status string) (WorkOrder, bool, bool) {
+// Update applies a status change to the maintenance task with the given id.
+// It returns the resulting order on success (including a no-op where the status
+// is unchanged), ErrWorkNotFound when no such task exists, or ErrWorkTransition
+// when the move is not a legal step in workTransitions. Returning distinct
+// errors means callers can never mistake a rejected change for an accepted one,
+// so the order echoed back to the client always reflects what is persisted.
+func (s *WorkStore) Update(id, status string) (WorkOrder, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	order, ok := s.orders[id]
 	if !ok {
-		return WorkOrder{}, false, false
+		return WorkOrder{}, ErrWorkNotFound
+	}
+	if order.Status == status {
+		return order, nil
 	}
 	if !workTransitions[order.Status][status] {
-		return order, true, false
+		return WorkOrder{}, ErrWorkTransition
 	}
 	order.Status = status
 	s.orders[id] = order
-	return order, true, true
+	return order, nil
 }

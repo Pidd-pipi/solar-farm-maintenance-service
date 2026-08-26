@@ -13,27 +13,27 @@ type TraceEntry struct {
 	At        string
 }
 
-// OpsTracer keeps a bounded sliding window of recent request traces so
+// OpsActivityLog keeps a bounded sliding window of recent request traces so
 // operators can inspect recent behaviour without unbounded growth.
-type OpsTracer struct {
+type OpsActivityLog struct {
 	mu     sync.Mutex
 	cap    int
 	traces []TraceEntry
 }
 
-func newOpsTracer(capacity int) *OpsTracer {
+func newOpsActivityLog(capacity int) *OpsActivityLog {
 	if capacity < 1 {
 		capacity = 1
 	}
-	return &OpsTracer{cap: capacity, traces: []TraceEntry{}}
+	return &OpsActivityLog{cap: capacity, traces: []TraceEntry{}}
 }
 
-// globalOpsTracer keeps the bounded request trace shared by HTTP entry points.
-var globalOpsTracer = newOpsTracer(1000)
+// globalOpsActivityLog keeps the bounded request trace shared by HTTP entry points.
+var globalOpsActivityLog = newOpsActivityLog(1000)
 
 // Record appends an observation, trimming the oldest entries once the
 // configured capacity is exceeded.
-func (t *OpsTracer) Record(entry TraceEntry) {
+func (t *OpsActivityLog) Record(entry TraceEntry) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.traces = append(t.traces, entry)
@@ -43,7 +43,7 @@ func (t *OpsTracer) Record(entry TraceEntry) {
 }
 
 // Recent returns the newest up to n entries, oldest first.
-func (t *OpsTracer) Recent(n int) []TraceEntry {
+func (t *OpsActivityLog) Recent(n int) []TraceEntry {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if n < 1 || len(t.traces) == 0 {
@@ -58,7 +58,7 @@ func (t *OpsTracer) Recent(n int) []TraceEntry {
 }
 
 // Len returns the number of entries currently retained.
-func (t *OpsTracer) Len() int {
+func (t *OpsActivityLog) Len() int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return len(t.traces)

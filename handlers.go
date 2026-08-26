@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -39,13 +40,16 @@ func (h workHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	order, exists, changed := h.store.Update(parts[0], request.Status)
-	if !exists {
-		writeError(w, http.StatusNotFound, "maintenance task not found")
-		return
-	}
-	if !changed {
-		writeJSON(w, http.StatusOK, order)
+	order, err := h.store.Update(parts[0], request.Status)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrWorkNotFound):
+			writeError(w, http.StatusNotFound, "maintenance task not found")
+		case errors.Is(err, ErrWorkTransition):
+			writeError(w, http.StatusConflict, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, order)
