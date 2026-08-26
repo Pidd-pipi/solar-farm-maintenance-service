@@ -13,7 +13,7 @@ type opsHandler struct {
 	service  *OpsService
 	notifier *Notifier
 	metrics  *MetricsCollector
-	tracer   *OpsTracer
+	tracer   *OpsActivityLog
 	pipeline *TelemetryPipeline
 }
 
@@ -27,7 +27,7 @@ func newOpsHandler() *opsHandler {
 	service := newOpsService(seed)
 	notifier := newNotifier(3)
 	metrics := newMetricsCollector(200)
-	tracer := newOpsTracer(1000)
+	tracer := newOpsActivityLog(1000)
 	pipeline := newTelemetryPipeline(2, metrics, notifier, service.audit)
 	pipeline.Start(context.Background())
 	return &opsHandler{service: service, notifier: notifier, metrics: metrics, tracer: tracer, pipeline: pipeline}

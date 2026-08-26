@@ -20,7 +20,7 @@ func healthProbeCount() int {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	globalOpsTracer.Record(traceEntryFor(opsRequestID(r), r.URL.Path, 0))
+	globalOpsActivityLog.Record(traceEntryFor(opsRequestID(r), r.URL.Path, 0))
 	healthProbeMu.Lock()
 	healthProbeHistory = append(healthProbeHistory, r.URL.Path)
 	if len(healthProbeHistory) > healthProbeCap {

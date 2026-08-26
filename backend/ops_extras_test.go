@@ -113,8 +113,8 @@ func TestMetricsCollectorCapacity(t *testing.T) {
 	}
 }
 
-func TestOpsTracerBounded(t *testing.T) {
-	tracer := newOpsTracer(5)
+func TestOpsActivityLogBounded(t *testing.T) {
+	tracer := newOpsActivityLog(5)
 	for i := 0; i < 50; i++ {
 		tracer.Record(traceEntryFor("r", "/x", int64(i)))
 	}

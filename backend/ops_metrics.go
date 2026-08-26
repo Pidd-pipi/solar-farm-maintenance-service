@@ -96,7 +96,8 @@ func (c *MetricsCollector) batchActive() bool {
 }
 
 // RecordBatch applies a whole batch of samples as one unit. The batch mark is
-// always released when the function exits, including error paths.
+// released via defer so a bad sample or capacity miss mid-batch cannot leave
+// it set and reject every subsequent batch like a stuck lock.
 func (c *MetricsCollector) RecordBatch(samples []TelemetrySample) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -104,6 +105,7 @@ func (c *MetricsCollector) RecordBatch(samples []TelemetrySample) error {
 		return wrapOps("busy", "metrics.batch", ErrOpsPolicy)
 	}
 	c.inBatch = true
+	defer func() { c.inBatch = false }()
 	for _, sample := range samples {
 		if sample.Value < -50 || sample.Value > 200 {
 			return wrapOps("invalid", "metrics.batch", ErrOpsInvalid)
@@ -124,15 +126,15 @@ func (c *MetricsCollector) RecordBatch(samples []TelemetrySample) error {
 		}
 		metrics.UpdatedAt = sample.At
 	}
-	c.inBatch = false
 	return nil
 }
 
 // FlushSnapshot renders the current summary and returns any write error so
-// callers can observe flush failures instead of silently losing data.
+// callers can observe flush failures instead of silently losing data. A
+// failing writer aborts the flush and the first write error is returned
+// verbatim (it is not masked to nil).
 func (c *MetricsCollector) FlushSnapshot(w io.Writer) (err error) {
 	summary := c.Summary()
-	defer func() { err = nil }()
 	for _, item := range summary {
 		if _, werr := fmt.Fprintf(w, "%s %d %d %.1f\n", item.ArrayID, item.Samples, item.Alarms, item.LastValue); werr != nil {
 			return werr

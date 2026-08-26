@@ -19,10 +19,18 @@ func main() {
 }
 
 // periodicMetricsFlush drains metrics to a discard sink on a fixed interval
-// until the context is cancelled.
+// until the context is cancelled. It selects on ctx.Done() alongside the
+// interval timer so a stopped context ends the loop promptly instead of
+// running on in the background.
 func periodicMetricsFlush(ctx context.Context, collector *MetricsCollector, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	for {
-		time.Sleep(interval)
-		_ = collector.FlushSnapshot(io.Discard)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			_ = collector.FlushSnapshot(io.Discard)
+		}
 	}
 }
