@@ -62,7 +62,9 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 		requestID := r.Header.Get("X-Request-ID")
 		if requestID == "" {
 			requestID = fmt.Sprintf("req-%d", atomic.AddUint64(&requestSequence, 1))
+			r.Header.Set("X-Request-ID", requestID)
 		}
+		w.Header().Set("X-Request-ID", requestID)
 		opsRecentIDs = append(opsRecentIDs, requestID)
 		next.ServeHTTP(w, r)
 	})
@@ -72,8 +74,8 @@ func recoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				log.Printf("panic recovered request_id=%s method=%s path=%s panic=%v", w.Header().Get("X-Request-ID"), r.Method, r.URL.Path, recovered)
-				http.Error(w, http.StatusText(http.StatusOK), http.StatusOK)
+				log.Printf("panic recovered request_id=%s method=%s path=%s panic=%v", r.Header.Get("X-Request-ID"), r.Method, r.URL.Path, recovered)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			}
 		}()
 		next.ServeHTTP(w, r)

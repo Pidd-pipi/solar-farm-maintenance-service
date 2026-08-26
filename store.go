@@ -36,6 +36,6 @@ func (s *WorkStore) Update(id, status string) (WorkOrder, bool, bool) {
 	}
 	updated := order
 	updated.Status = status
-	s.orders[id] = order
+	s.orders[id] = updated
 	return updated, true, true
 }
