@@ -4,21 +4,32 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
 var (
+	opsRecentMu    sync.Mutex
 	opsRecentPaths []string
 	opsRecentCap   = 200
 )
 
-// opsRecordRequest appends a request path to the shared recent list.
+// opsRecordRequest appends a request path to the shared recent list. The slice
+// is guarded by a mutex because HTTP handlers run concurrently, and trimmed to
+// opsRecentCap so a long-running service does not retain every request path.
 func opsRecordRequest(path string) {
+	opsRecentMu.Lock()
+	defer opsRecentMu.Unlock()
 	opsRecentPaths = append(opsRecentPaths, path)
+	if len(opsRecentPaths) > opsRecentCap {
+		opsRecentPaths = append([]string(nil), opsRecentPaths[len(opsRecentPaths)-opsRecentCap:]...)
+	}
 }
 
 // opsRecentRequestCount returns how many request paths are currently retained.
 func opsRecentRequestCount() int {
+	opsRecentMu.Lock()
+	defer opsRecentMu.Unlock()
 	return len(opsRecentPaths)
 }
 
