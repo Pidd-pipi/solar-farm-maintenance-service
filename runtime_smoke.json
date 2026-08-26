@@ -1,0 +1,7 @@
+{
+  "mode": "service",
+  "workdir": "backend",
+  "start": "go run .",
+  "ready_url": "http://127.0.0.1:8080/healthz",
+  "project_intro": "基于 Go 实现的光伏场站维护服务 Web 项目，一款后端服务，完成维护任务状态推进、运维工单管理、遥测数据接入、合规检查与通知派发。"
+}
