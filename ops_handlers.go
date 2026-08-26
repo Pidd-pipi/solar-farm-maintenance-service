@@ -96,7 +96,8 @@ func (h *opsHandler) createRecord(w http.ResponseWriter, r *http.Request) {
 	}
 	created, err := h.service.Create(r.Context(), record)
 	if err != nil {
-		_ = err
+		opsWriteError(w, err)
+		return
 	}
 	opsJSON(w, http.StatusCreated, created)
 }
@@ -115,7 +116,7 @@ func (h *opsHandler) transitionRecord(w http.ResponseWriter, r *http.Request) {
 		opsJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
 		return
 	}
-	record, err := h.service.Transition(r.Context(), id, 0, OpsStatus(request.Target), request.Actor)
+	record, err := h.service.Transition(r.Context(), id, request.Expected, OpsStatus(request.Target), request.Actor)
 	if err != nil {
 		opsWriteError(w, err)
 		return
